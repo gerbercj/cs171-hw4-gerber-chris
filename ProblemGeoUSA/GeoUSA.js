@@ -33,8 +33,23 @@ var svg = canvas.append("g").attr({
 var projection = d3.geo.albersUsa().translate([width / 2, height / 2]);//.precision(.1);
 var path = d3.geo.path().projection(projection);
 
-var dataSet = {};
+var stats;
 var stations = [];
+
+var drawStations = function() {
+  svg.selectAll(".station")
+    .data(stations)
+    .enter().append("circle")
+    .attr({
+      class: function(d) { return "station" + (stats[d.id] ? " hasData" : "") },
+      cx:    function(d) { return d.x; },
+      cy:    function(d) { return d.y; },
+      r:     function(d) {
+        if (!stats[d.id]) return 2;
+        return Math.sqrt(stats[d.id].sum)/2000;
+      }
+    });
+}
 
 function loadStations() {
   d3.csv("../data/NSRDB_StationsMeta.csv",function(error,data){
@@ -59,9 +74,7 @@ function loadStations() {
 
 function loadStats() {
   d3.json("../data/reducedMonthStationHour2003_2004.json", function(error,data){
-    completeDataSet= data;
-
-    //....
+    stats = data;
 
     loadStations();
   })
@@ -79,18 +92,6 @@ d3.json("../data/us-named.json", function(error, data) {
 
   loadStats();
 });
-
-var drawStations = function() {
-  svg.selectAll(".station")
-    .data(stations)
-    .enter().append("circle")
-    .attr({
-      class: "station",
-      cx: function(d) { return d.x; },
-      cy: function(d) { return d.y; },
-      r: 2
-    });
-}
 
 // ALL THESE FUNCTIONS are just a RECOMMENDATION !!!!
 var createDetailVis = function() {
@@ -120,10 +121,6 @@ function doZoom(x, y, k) {
     .duration(750)
     .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + -x + "," + -y + ")")
     .style("stroke-width", 1.5 / k + "px");
-}
-
-function zoomToBB() {
-
 }
 
 function resetZoom() {

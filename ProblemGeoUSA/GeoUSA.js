@@ -16,6 +16,8 @@ var bbVis = {
   h: 300
 };
 
+var tooltip = d3.select("#tooltip");
+
 var detailVis = d3.select("#detailVis").append("svg").attr({
   width:350,
   height:200
@@ -40,6 +42,8 @@ var drawStations = function() {
   svg.selectAll(".station")
     .data(stations)
     .enter().append("circle")
+    .on("mouseover", stationMouseOver)
+    .on("mouseout", stationMouseOut)
     .attr({
       class: function(d) { return "station" + (stats[d.id] ? " hasData" : "") },
       cx:    function(d) { return d.x; },
@@ -100,6 +104,19 @@ var createDetailVis = function() {
 
 var updateDetailVis = function(data, name) {
 
+}
+
+function stationMouseOver(d) {
+  tooltip.select("#station").text(d.name);
+  tooltip.select("#sum").text(stats[d.id] ? (stats[d.id].sum + " (100 lux)") : "no data");
+  tooltip
+    .style("left", d.x.toFixed() + "px")
+    .style("top", d.y.toFixed() + "px")
+    .classed("hidden", false);
+}
+
+function stationMouseOut(d) {
+  tooltip.classed("hidden", true);
 }
 
 // ZOOMING

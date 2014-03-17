@@ -52,7 +52,34 @@
         fill: gray;
         opacity: .3;
       }
+
+      #tooltip {
+        position: absolute;
+        width: auto;
+        height: auto;
+        padding: 3px;
+        background-color: khaki;
+        opacity: 0.8;
+        border-radius: 10px;
+        pointer-events: none;
+      }
+
+      #tooltip.hidden {
+        display: none;
+      }
+
+      #tooltip table tr th {
+        text-align: left;
+        vertical-align: top;
+      }
     </style>
+
+    <div id="tooltip" class="hidden">
+      <table>
+        <tr><th>Station:</th><td><span id="station"></span></td></tr>
+        <tr><th>Light:</th><td><span id="sum"></span></td></tr>
+      </table>
+    </div>
 
     <table>
       <tr><td><div id="vis"></div></td><td><div id="detailVis"></div></td></tr>

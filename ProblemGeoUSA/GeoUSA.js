@@ -42,6 +42,7 @@ var drawStations = function() {
   svg.selectAll(".station")
     .data(stations)
     .enter().append("circle")
+    .on("click", stationClicked)
     .on("mouseover", stationMouseOver)
     .on("mouseout", stationMouseOut)
     .attr({
@@ -106,12 +107,20 @@ var updateDetailVis = function(data, name) {
 
 }
 
+function stationClicked(d) {
+  // Highlight the selected station
+  svg.selectAll(".station")
+    .classed("selected", function(e) { return d.id == e.id; });
+
+  // updateDetail
+}
+
 function stationMouseOver(d) {
   tooltip.select("#station").text(d.name);
   tooltip.select("#sum").text(stats[d.id] ? (stats[d.id].sum + " (100 lux)") : "no data");
   tooltip
-    .style("left", d.x.toFixed() + "px")
-    .style("top", d.y.toFixed() + "px")
+    .style("left", (margin.left + Math.round(d.x)) + "px")
+    .style("top", (margin.top + Math.round(d.y) + 20) + "px")
     .classed("hidden", false);
 }
 
@@ -121,6 +130,7 @@ function stationMouseOut(d) {
 
 // ZOOMING
 function stateClicked(d) {
+  // TODO: Fix tooltip on zoom in/out
   if (d && centered !== d) {
     var centroid = path.centroid(d);
     centered = d;

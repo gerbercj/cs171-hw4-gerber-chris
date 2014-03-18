@@ -16,7 +16,15 @@ var bbVis = {
   h: 300
 };
 
-var tooltip = d3.select("#tooltip");
+var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-8, 0])
+  .html(function(d) {
+    return "<table>" +
+             "<tr><th>Station:</th><td>" + d.name + "</td></tr>" +
+             "<tr><th>Light:</th><td>" + (stats[d.id] ? stats[d.id].sum : "no data") + "</td></tr>" +
+           "</table>";
+  });
 
 var detailVis = d3.select("#detailVis").append("svg").attr({
   width:350,
@@ -32,6 +40,8 @@ var svg = canvas.append("g").attr({
   transform: "translate(" + margin.left + "," + margin.top + ")"
 });
 
+svg.call(tip);
+
 var projection = d3.geo.albersUsa().translate([width / 2, height / 2]);//.precision(.1);
 var path = d3.geo.path().projection(projection);
 
@@ -43,8 +53,8 @@ var drawStations = function() {
     .data(stations)
     .enter().append("circle")
     .on("click", stationClicked)
-    .on("mouseover", stationMouseOver)
-    .on("mouseout", stationMouseOut)
+    .on("mouseover", tip.show)
+    .on("mouseout", tip.hide)
     .attr({
       class: function(d) { return "station" + (stats[d.id] ? " hasData" : "") },
       cx:    function(d) { return d.x; },
@@ -115,19 +125,6 @@ function stationClicked(d) {
   // updateDetail
 }
 
-function stationMouseOver(d) {
-  tooltip.select("#station").text(d.name);
-  tooltip.select("#sum").text(stats[d.id] ? (stats[d.id].sum + " (100 lux)") : "no data");
-  tooltip
-    .style("left", (margin.left + Math.round(d.x)) + "px")
-    .style("top", (margin.top + Math.round(d.y) + 20) + "px")
-    .classed("hidden", false);
-}
-
-function stationMouseOut(d) {
-  tooltip.classed("hidden", true);
-}
-
 // ZOOMING
 function stateClicked(d) {
   // TODO: Fix tooltip on zoom in/out
@@ -146,7 +143,7 @@ function doZoom(x, y, k) {
 
   svg.transition()
     .duration(750)
-    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + -x + "," + -y + ")")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + (margin.left - x) + "," + (margin.top - y) + ")")
     .style("stroke-width", 1.5 / k + "px");
 }
 

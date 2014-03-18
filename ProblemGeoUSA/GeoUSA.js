@@ -1,3 +1,5 @@
+var centeredState, xVals, yScale, chart;
+
 var margin = {
   top: 50,
   right: 50,
@@ -7,7 +9,6 @@ var margin = {
 
 var width = 1060 - margin.left - margin.right;
 var height = 800 - margin.bottom - margin.top;
-var centered;
 
 var bbVis = {
   x: 100,
@@ -29,7 +30,14 @@ var tip = d3.tip()
 var detailVis = d3.select("#detailVis").append("svg").attr({
   width:350,
   height:200
-})
+});
+
+var bbDetail = {
+  x: 15,
+  y: 25,
+  w: 270,
+  h: 120
+};
 
 var canvas = d3.select("#vis").append("svg").attr({
   width: width + margin.left + margin.right,
@@ -92,6 +100,7 @@ function loadStats() {
     stats = data;
 
     loadStations();
+    createDetailVis();
   })
 }
 
@@ -108,47 +117,118 @@ d3.json("../data/us-named.json", function(error, data) {
   loadStats();
 });
 
-// ALL THESE FUNCTIONS are just a RECOMMENDATION !!!!
+// DETAIL VIS
 var createDetailVis = function() {
+  xVals = Object.keys(stats).map(function(station) {
+    return Object.keys(stats[station].hourly);
+  }).reduce(function(prev, curr) {
+    return d3.set(prev.concat(curr)).values();
+  }, []).sort();
 
+  var yMax = d3.max(Object.keys(stats).map(function(station) {
+    return d3.max(Object.keys(stats[station].hourly).map(function(hour) {
+      return stats[station].hourly[hour];
+    }));
+  }));
+
+  var xScale = d3.scale.ordinal().domain(xVals).rangeRoundBands([0, bbDetail.w]);
+  yScale = d3.scale.linear().domain([0, yMax]).range([bbDetail.h, 0]);
+
+  var xAxis = d3.svg.axis()
+    .scale(xScale)
+    .orient('bottom');
+
+  var yAxis = d3.svg.axis()
+    .scale(yScale)
+    .orient('right');
+
+  detailVis.append("g")
+    .attr("transform", "translate(5,15)")
+    .append("text")
+      .attr("class", "detailTitle");
+
+  detailVis.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(" + bbDetail.x + "," + (bbDetail.y + bbDetail.h) + ")")
+    .call(xAxis)
+    .selectAll("text")
+    .style("text-anchor", "end")
+    .attr("dx", "-.7em")
+    .attr("dy", "0.1em")
+    .attr("transform", function(d) {
+      return "rotate(-70)"
+    });
+
+  detailVis.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(" + (bbDetail.x + bbDetail.w) + "," + bbDetail.y + ")")
+    .call(yAxis);
+
+  chart = detailVis.append("g")
+    .attr({
+      class: "chart",
+      width: bbDetail.w,
+      height: bbDetail.h,
+      transform: "translate(" + bbDetail.x + "," + bbDetail.y + ")"
+    });
+
+  chart.selectAll(".bar")
+    .data(xVals)
+    .enter().append("rect")
+    .attr({
+      class:     "bar",
+      transform: function(d) { return "translate(" + xScale(d) + ",0)"; },
+      y:         bbDetail.h,
+      height:    0,
+      width:     xScale.rangeBand() - 1
+    });
 }
 
-var updateDetailVis = function(data, name) {
+var updateDetailVis = function(station) {
+  detailVis.select(".detailTitle")[0][0].innerHTML = station.name;
 
+  chart.selectAll(".bar")
+    .data(xVals.map(function(hour) {
+      return { hour: hour, value: (stats[station.id] ? stats[station.id].hourly[hour] : 0) };
+    }))
+    .transition().duration(750)
+      .attr({
+        y:      function(d) { return yScale(d.value); },
+        height: function(d) { return bbDetail.h - yScale(d.value); }
+      });
 }
 
-function stationClicked(d) {
+var stationClicked = function(d) {
   // Highlight the selected station
   svg.selectAll(".station")
     .classed("selected", function(e) { return d.id == e.id; });
 
-  // updateDetail
+  updateDetailVis(d);
 }
 
 // ZOOMING
 function stateClicked(d) {
-  // TODO: Fix tooltip on zoom in/out
-  if (d && centered !== d) {
+  if (d && centeredState !== d) {
     var centroid = path.centroid(d);
-    centered = d;
+    centeredState = d;
     doZoom(centroid[0], centroid[1], 4);
   } else {
     resetZoom();
   }
 }
 
+function resetZoom() {
+  centeredState = null;
+  doZoom(width / 2, height / 2, 1);
+}
+
 function doZoom(x, y, k) {
   svg.selectAll("path")
-    .classed("active", centered && function(d) { return d === centered; });
+    .classed("active", centeredState && function(d) { return d === centeredState; });
 
   svg.transition()
     .duration(750)
     .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + (margin.left - x) + "," + (margin.top - y) + ")")
     .style("stroke-width", 1.5 / k + "px");
-}
-
-function resetZoom() {
-  centered = null;
-  doZoom(width / 2, height / 2, 1);
 }
 

@@ -1,5 +1,7 @@
+// Global variable definitions
 var centeredState, xVals, yScale, chart;
 
+// Define page, map, and detail boundaries and canvases
 var margin = {
   top: 50,
   right: 50,
@@ -17,21 +19,6 @@ var bbVis = {
   h: 300
 };
 
-var tip = d3.tip()
-  .attr('class', 'd3-tip')
-  .offset([-8, 0])
-  .html(function(d) {
-    return "<table>" +
-             "<tr><th>Station:</th><td>" + d.name + "</td></tr>" +
-             "<tr><th>Light:</th><td>" + (stats[d.id] ? stats[d.id].sum : "no data") + "</td></tr>" +
-           "</table>";
-  });
-
-var detailVis = d3.select("#detailVis").append("svg").attr({
-  width:350,
-  height:200
-});
-
 var bbDetail = {
   x: 15,
   y: 25,
@@ -44,18 +31,37 @@ var canvas = d3.select("#vis").append("svg").attr({
   height: height + margin.top + margin.bottom
 })
 
+var detailVis = d3.select("#detailVis").append("svg").attr({
+  width:350,
+  height:200
+});
+
 var svg = canvas.append("g").attr({
   transform: "translate(" + margin.left + "," + margin.top + ")"
 });
 
+// Set up tooltips
+var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-8, 0])
+  .html(function(d) {
+    return "<table>" +
+             "<tr><th>Station:</th><td>" + d.name + "</td></tr>" +
+             "<tr><th>Light:</th><td>" + (stats[d.id] ? stats[d.id].sum : "no data") + "</td></tr>" +
+           "</table>";
+  });
+
 svg.call(tip);
 
-var projection = d3.geo.albersUsa().translate([width / 2, height / 2]);//.precision(.1);
+// Create the projection
+var projection = d3.geo.albersUsa().translate([width / 2, height / 2]);
 var path = d3.geo.path().projection(projection);
 
+// Storage for data
 var stats;
 var stations = [];
 
+// Draw the dots for the stations on the map
 var drawStations = function() {
   svg.selectAll(".station")
     .data(stations)
@@ -74,6 +80,7 @@ var drawStations = function() {
     });
 }
 
+// Load the station data
 function loadStations() {
   d3.csv("../data/NSRDB_StationsMeta.csv",function(error,data){
     data.forEach(function(d) {
@@ -95,6 +102,7 @@ function loadStations() {
   });
 }
 
+// Load the light data
 function loadStats() {
   d3.json("../data/reducedMonthStationHour2003_2004.json", function(error,data){
     stats = data;
@@ -104,6 +112,7 @@ function loadStats() {
   })
 }
 
+// Load the states and draw them
 d3.json("../data/us-named.json", function(error, data) {
   var usMap = topojson.feature(data,data.objects.states).features
 
@@ -117,7 +126,7 @@ d3.json("../data/us-named.json", function(error, data) {
   loadStats();
 });
 
-// DETAIL VIS
+// Create the detail visualization
 var createDetailVis = function() {
   xVals = Object.keys(stats).map(function(station) {
     return Object.keys(stats[station].hourly);
@@ -184,6 +193,7 @@ var createDetailVis = function() {
     });
 }
 
+// Update the detail visualization to reflect a station
 var updateDetailVis = function(station) {
   detailVis.select(".detailTitle")[0][0].innerHTML = station.name;
 
@@ -198,6 +208,7 @@ var updateDetailVis = function(station) {
       });
 }
 
+// Click handlers
 var stationClicked = function(d) {
   // Highlight the selected station
   svg.selectAll(".station")
@@ -206,7 +217,6 @@ var stationClicked = function(d) {
   updateDetailVis(d);
 }
 
-// ZOOMING
 function stateClicked(d) {
   if (d && centeredState !== d) {
     var centroid = path.centroid(d);
@@ -217,6 +227,7 @@ function stateClicked(d) {
   }
 }
 
+// Zooming functions
 function resetZoom() {
   centeredState = null;
   doZoom(width / 2, height / 2, 1);

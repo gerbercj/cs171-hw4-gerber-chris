@@ -15,8 +15,6 @@ var bbVis = {
   h: 300
 };
 
-var dataSet = {};
-
 var svg = d3.select("#vis").append("svg").attr({
   width: width + margin.left + margin.right,
   height: height + margin.top + margin.bottom
@@ -35,18 +33,34 @@ var projectionMethods = [
 ];
 
 var actualProjectionMethod = 0;
+var selectedIndicator, selectedYear;
 var colorMin = colorbrewer.Greens[3][0];
 var colorMax = colorbrewer.Greens[3][2];
 
 var path = d3.geo.path().projection(projectionMethods[0].method);
 
-function runAQueryOn(indicatorString) {
+function runAQueryOn(indicator, year) {
   $.ajax({
-    url: "http://api.worldbank.org/countries/all?format=jsonP&prefix=Getdata&per_page=500&date=2000",
+    url: "http://api.worldbank.org/countries/all/indicators/" + indicator + "?format=jsonP&prefix=getdata&per_page=500&date=" + year + ":" + year,
     jsonpCallback: 'getdata',
     dataType: 'jsonp',
     success: function (data, status){
-      
+      // transform data
+      var dataSet = data[1].map(function(d) {
+        return { country: d.country.id, value: d.value };
+      });
+      var dataSetExtent = d3.extent(dataSet.map(function(d) {
+        return d.value;
+      }));
+
+      // generate scale
+      var scale = d3.scale.linear().domain(dataSetExtent).range([colorMin, colorMax]);
+
+      // update graph colors
+      svg.selectAll(".country")
+        .data(dataSet)
+        .transition().duration(750)
+          .style("fill", function(d) { return scale(d.value); });
     }
   });
 }
@@ -60,6 +74,7 @@ var initVis = function(error, indicators, world) {
       .enter().append("option")
         .attr("value", function(d) { return d.IndicatorCode; })
         .text(function(d) { return d.IndicatorName; });
+  selectedIndicator = indicators[0].IndicatorCode;
 
   // create drop-down list of years
   // TODO: Can we get the range programatically?
@@ -70,6 +85,7 @@ var initVis = function(error, indicators, world) {
     .enter().append("option")
       .attr("value", function(d) { return d; })
       .text(function(d) { return d; });
+  selectedYear = 1960;
 
   // create map
   console.log(world);
@@ -94,13 +110,15 @@ var textLabel = svg.append("text").text(projectionMethods[actualProjectionMethod
 })
 
 var changeIndicator = function() {
-  var selectedValue = d3.event.target.value;
-  console.log("indicator:", selectedValue);
+  selectedIndicator = d3.event.target.value;
+  console.log("indicator:", selectedIndicator);
+  runAQueryOn(selectedIndicator, selectedYear);
 }
 
 var changeYear = function() {
-  var selectedValue = d3.event.target.value;
-  console.log("year:", selectedValue);
+  selectedYear = d3.event.target.value;
+  console.log("year:", selectedYear);
+  runAQueryOn(selectedIndicator, selectedYear);
 }
 
 var changePro = function() {
@@ -111,7 +129,7 @@ var changePro = function() {
   svg.selectAll(".country").transition().duration(750).attr("d",path);
 };
 
-d3.select("body").append("button").text("changePro").on({
+d3.select("body").append("button").text("Change Projection").on({
   click: changePro
 })
 

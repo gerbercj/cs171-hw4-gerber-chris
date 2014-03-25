@@ -1,3 +1,4 @@
+// configure the page layout
 var margin = {
   top: 50,
   right: 50,
@@ -15,6 +16,7 @@ var bbVis = {
   h: 300
 };
 
+// create variables for the drawing regions
 var svg = d3.select("#vis").append("svg").attr({
   width: width + margin.left + margin.right,
   height: height + margin.top + margin.bottom
@@ -24,6 +26,7 @@ var svg = d3.select("#vis").append("svg").attr({
 var legend = svg.append("g");
 var textLabel = d3.select("#textLabel");
 
+// create an array of projection types
 var projectionMethods = [
   {
     name: "mercator", method: d3.geo.mercator().translate([width / 2, height / 2])
@@ -34,6 +37,7 @@ var projectionMethods = [
   }
 ];
 
+// configure global variables
 var actualProjectionMethod = 0;
 var selectedIndicator, selectedYear;
 var colorMin = colorbrewer.Greens[3][0];
@@ -43,6 +47,7 @@ var countries, codes={}, countryDetails={};
 
 var path = d3.geo.path().projection(projectionMethods[0].method);
 
+// helpers to update the detail text
 var updateTextLabel = function(country) {
   var detailHtml = "";
   if (country != "") {
@@ -91,6 +96,7 @@ function queryCountry(country) {
   }
 }
 
+// query indicator data for year from World Bank
 function queryIndicator(indicator, year) {
   $.ajax({
     url: "http://api.worldbank.org/countries/all/indicators/" + indicator + "?format=jsonP&prefix=getindicator&per_page=500&date=" + year + ":" + year,
@@ -136,6 +142,7 @@ function queryIndicator(indicator, year) {
   });
 }
 
+// configure the basic visualization
 var initVis = function(error, indicators, world, country_codes) {
   // create a dictionary of country codes
   country_codes.forEach(function(d) {
@@ -226,6 +233,7 @@ var initVis = function(error, indicators, world, country_codes) {
     .text("");
 }
 
+// load all of the data files and process them
 queue()
   .defer(d3.csv,"../data/worldBank_indicators.csv")
   .defer(d3.json,"../data/world_data.json")
@@ -234,10 +242,12 @@ queue()
   .defer(d3.json,"../data/wikipedia-iso-country-codes.json")
   .await(initVis);
 
+// show the projection type on the map
 var projectionLabel = svg.append("text").text(projectionMethods[actualProjectionMethod].name).attr({
   transform: "translate(-40,-30)"
 })
 
+// handle interactions
 var countryClicked = function(d) {
   queryCountry(codes[d.id]);
 }

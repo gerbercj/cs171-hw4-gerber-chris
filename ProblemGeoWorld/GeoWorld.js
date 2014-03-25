@@ -24,11 +24,11 @@ var svg = d3.select("#vis").append("svg").attr({
 
 var projectionMethods = [
   {
-    name: "mercator", method: d3.geo.mercator().translate([width / 2, height / 2])//.precision(.1);
+    name: "mercator", method: d3.geo.mercator().translate([width / 2, height / 2])
   }, {
-    name: "equiRect", method: d3.geo.equirectangular().translate([width / 2, height / 2])//.precision(.1);
+    name: "equiRect", method: d3.geo.equirectangular().translate([width / 2, height / 2])
   }, {
-    name: "stereo", method: d3.geo.stereographic().translate([width / 2, height / 2])//.precision(.1);
+    name: "stereo", method: d3.geo.stereographic().translate([width / 2, height / 2])
   }
 ];
 
@@ -37,6 +37,7 @@ var selectedIndicator, selectedYear;
 var colorMin = colorbrewer.Greens[3][0];
 var colorMax = colorbrewer.Greens[3][2];
 
+var countries, codes;
 var path = d3.geo.path().projection(projectionMethods[0].method);
 
 function runAQueryOn(indicator, year) {
@@ -46,11 +47,22 @@ function runAQueryOn(indicator, year) {
     dataType: 'jsonp',
     success: function (data, status){
       // transform data
-      var dataSet = data[1].map(function(d) {
-        return { country: d.country.id, value: d.value };
+      var dataSet = {};
+
+      // make an associative array of country => value
+      data[1].forEach(function(d) {
+        dataSet[d.country.id] = parseFloat(d.value);
       });
-      var dataSetExtent = d3.extent(dataSet.map(function(d) {
-        return d.value;
+
+      // update countries with values
+      countries = countries.map(function(country) {
+        country.value = dataSet[codes[country.id]];
+        return country;
+      });
+
+      // determine value range for color scale
+      var dataSetExtent = d3.extent(countries.map(function(country) {
+        return country.value;
       }));
 
       // generate scale
@@ -58,14 +70,21 @@ function runAQueryOn(indicator, year) {
 
       // update graph colors
       svg.selectAll(".country")
-        .data(dataSet)
+        .data(countries)
         .transition().duration(750)
-          .style("fill", function(d) { return scale(d.value); });
+          .attr("d", path)
+          .style("fill", function(d) { if (d.value) return scale(d.value); });
     }
   });
 }
 
-var initVis = function(error, indicators, world) {
+var initVis = function(error, indicators, world, country_codes) {
+  // create a dictionary of country codes
+  codes = {};
+  country_codes.forEach(function(d) {
+    codes[d["Alpha-3 code"]] = d["Alpha-2 code"];
+  });
+
   // create drop-down list of indicators
   d3.select("#selector").append("select")
     .on("change", changeIndicator)
@@ -89,7 +108,7 @@ var initVis = function(error, indicators, world) {
 
   // create map
   console.log(world);
-  var countries = world.features;
+  countries = world.features;
   svg.selectAll(".country")
     .data(countries)
     .enter().append("path")
@@ -102,6 +121,9 @@ var initVis = function(error, indicators, world) {
 queue()
   .defer(d3.csv,"../data/worldBank_indicators.csv")
   .defer(d3.json,"../data/world_data.json")
+  // the following data is from: https://gist.github.com/jeremybuis/4997305
+  // and from: http://www.freeformatter.com/iso-country-list-html-select.html
+  .defer(d3.json,"../data/wikipedia-iso-country-codes.json")
   // .defer(d3.json,"../data/WorldBankCountries.json")
   .await(initVis);
 
@@ -126,7 +148,9 @@ var changePro = function() {
 
   textLabel.text(projectionMethods[actualProjectionMethod].name);
   path = d3.geo.path().projection(projectionMethods[actualProjectionMethod].method);
-  svg.selectAll(".country").transition().duration(750).attr("d",path);
+  svg.selectAll(".country")
+    .transition().duration(750)
+      .attr("d", path);
 };
 
 d3.select("body").append("button").text("Change Projection").on({

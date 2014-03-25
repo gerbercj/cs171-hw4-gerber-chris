@@ -37,7 +37,7 @@ var selectedIndicator, selectedYear;
 var colorMin = colorbrewer.Greens[3][0];
 var colorMax = colorbrewer.Greens[3][2];
 
-var countries, codes;
+var countries, codes={}, legend;
 var path = d3.geo.path().projection(projectionMethods[0].method);
 
 function runAQueryOn(indicator, year) {
@@ -68,6 +68,10 @@ function runAQueryOn(indicator, year) {
       // generate scale
       var scale = d3.scale.linear().domain(dataSetExtent).range([colorMin, colorMax]);
 
+      // update legend labels
+      d3.select("#minVal").text(Math.round(dataSetExtent[0]));
+      d3.select("#maxVal").text(Math.round(dataSetExtent[1]));
+
       // update graph colors
       svg.selectAll(".country")
         .data(countries)
@@ -80,7 +84,6 @@ function runAQueryOn(indicator, year) {
 
 var initVis = function(error, indicators, world, country_codes) {
   // create a dictionary of country codes
-  codes = {};
   country_codes.forEach(function(d) {
     codes[d["Alpha-3 code"]] = d["Alpha-2 code"];
   });
@@ -107,7 +110,6 @@ var initVis = function(error, indicators, world, country_codes) {
   selectedYear = 1960;
 
   // create map
-  console.log(world);
   countries = world.features;
   svg.selectAll(".country")
     .data(countries)
@@ -116,6 +118,58 @@ var initVis = function(error, indicators, world, country_codes) {
         class: "country",
         d: path
       });
+
+  // create legend
+  legend = svg.append("g");
+
+  gradient = legend.append("defs").append("linearGradient")
+    .attr({
+      id: "gradient",
+      x1: "0%",
+      y1: "0%",
+      x2: "0%",
+      y2: "100%",
+      spreadMethod: "pad"
+    });
+
+  gradient.append("stop")
+      .attr({
+        offset: "0%",
+        "stop-color": colorMax,
+        "stop-opacity": 1
+      });
+
+  gradient.append("stop")
+      .attr({
+        offset: "100%",
+        "stop-color": colorMin,
+        "stop-opacity": 1
+      });
+
+  legend.append("rect")
+    .attr({
+      x: 0,
+      y: 330,
+      width: 20,
+      height: 200
+    })
+    .style("fill", "url(#gradient)");
+
+  legend.append("text")
+    .attr({
+      id: "maxVal",
+      x: 25,
+      y: 334
+    })
+    .text("");
+
+  legend.append("text")
+    .attr({
+      id: "minVal",
+      x: 25,
+      y: 534
+    })
+    .text("");
 }
 
 queue()
